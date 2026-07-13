@@ -14,6 +14,9 @@ explicitly marked as safe.
 - safe cache scanner with dry-run cleanup
 - FPS/RAM performance audit
 - reversible performance profiles
+- before/after RAM benchmark
+- live browser RAM watcher
+- backup listing and restore
 - HTML and Markdown reports
 - browser extension permission audit
 - conservative guards for sensitive profile files
@@ -112,6 +115,25 @@ Apply a profile with backups:
 python -m browser_janitor optimize --profile gaming --apply
 ```
 
+Measure before/after browser RAM:
+
+```powershell
+python -m browser_janitor bench --delay 5
+```
+
+Watch browser RAM/process usage:
+
+```powershell
+python -m browser_janitor watch --interval 5
+```
+
+List and restore setting backups:
+
+```powershell
+python -m browser_janitor restore --list
+python -m browser_janitor restore --index 1 --apply
+```
+
 Profiles:
 
 - `gaming`: reduces background browser work for FPS-sensitive use.
@@ -150,15 +172,15 @@ Browser Janitor is intentionally conservative:
    configured cleanup path.
 5. Locked files are skipped instead of forcing browser processes to close.
 6. Performance profiles back up browser JSON settings before writing changes.
+7. Restore creates a second backup of the current file before replacing it.
 
 For best results, close your browsers before running `clean --apply`.
 
 ## Roadmap
 
-- interactive terminal menu
 - per-site storage size report
 - extension disable/open-management workflow
-- benchmark mode for before/after RAM snapshots
+- persistent watcher actions such as opening browser extension pages
 - Tauri desktop interface
 - native Rust rewrite for a single-file Windows executable
 

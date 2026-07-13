@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import subprocess
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -46,6 +47,22 @@ class AppliedChange:
     old_value: object
     new_value: object
     backup: Path
+
+
+@dataclass(frozen=True)
+class BrowserSnapshot:
+    timestamp: str
+    usage: list[ProcessUsage]
+    total_memory_bytes: int
+    total_processes: int
+
+
+@dataclass(frozen=True)
+class BackupFile:
+    browser: str
+    original: Path
+    backup: Path
+    created: str
 
 
 def read_json(path: Path) -> dict:
@@ -125,6 +142,23 @@ def process_usage() -> list[ProcessUsage]:
             )
         )
     return usage
+
+
+def take_snapshot() -> BrowserSnapshot:
+    usage = process_usage()
+    return BrowserSnapshot(
+        timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        usage=usage,
+        total_memory_bytes=sum(item.memory_bytes for item in usage),
+        total_processes=sum(item.count for item in usage),
+    )
+
+
+def benchmark(delay: int = 5) -> tuple[BrowserSnapshot, BrowserSnapshot]:
+    before = take_snapshot()
+    time.sleep(max(delay, 0))
+    after = take_snapshot()
+    return before, after
 
 
 def audit_performance() -> tuple[list[ProcessUsage], list[PerfFinding]]:
@@ -252,3 +286,27 @@ def apply_profile(
                 changes.append(AppliedChange(root.name, path, key, old, new, backup))
 
     return changes
+
+
+def list_backups(roots: list[BrowserRoot] | None = None) -> list[BackupFile]:
+    backups: list[BackupFile] = []
+    for root in roots or default_roots():
+        for backup in root.path.glob("*.browser-janitor-*.bak"):
+            original_name = backup.name.split(".browser-janitor-", 1)[0]
+            original = backup.with_name(original_name)
+            try:
+                created = datetime.fromtimestamp(backup.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+            except OSError:
+                created = "unknown"
+            backups.append(BackupFile(root.name, original, backup, created))
+    return sorted(backups, key=lambda item: item.backup.stat().st_mtime if item.backup.exists() else 0, reverse=True)
+
+
+def restore_backup(backup: BackupFile) -> Path:
+    restore_point = backup.original.with_name(
+        f"{backup.original.name}.before-restore-{datetime.now().strftime('%Y%m%d-%H%M%S')}.bak"
+    )
+    if backup.original.exists():
+        shutil.copy2(backup.original, restore_point)
+    shutil.copy2(backup.backup, backup.original)
+    return restore_point

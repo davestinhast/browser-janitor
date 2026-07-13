@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 
 from .extensions import ExtensionFinding
-from .performance import AppliedChange, PerfFinding, ProcessUsage
+from .performance import AppliedChange, BackupFile, BrowserSnapshot, PerfFinding, ProcessUsage
 from .report import human_size
 from .scanner import Candidate
 
@@ -80,3 +80,35 @@ def print_changes(changes: list[AppliedChange], applied: bool) -> None:
         print(f"       {item.old_value!r} -> {item.new_value!r}")
         if applied:
             print(f"       backup: {item.backup}")
+
+
+def print_snapshot(label: str, snapshot: BrowserSnapshot) -> None:
+    print(f"{label} ({snapshot.timestamp})")
+    print(f"  Total: {human_size(snapshot.total_memory_bytes)} across {snapshot.total_processes} processes")
+    for item in sorted(snapshot.usage, key=lambda p: p.memory_bytes, reverse=True):
+        print(f"  {item.browser:<16} {item.count:>3} processes  {human_size(item.memory_bytes):>10}")
+    if not snapshot.usage:
+        print("  No running browser processes found.")
+
+
+def print_benchmark(before: BrowserSnapshot, after: BrowserSnapshot) -> None:
+    print_banner()
+    print_snapshot("Before", before)
+    print()
+    print_snapshot("After", after)
+    delta = after.total_memory_bytes - before.total_memory_bytes
+    sign = "+" if delta >= 0 else "-"
+    print()
+    print(f"Delta: {sign}{human_size(abs(delta))}")
+
+
+def print_backup_list(backups: list[BackupFile]) -> None:
+    print_banner()
+    if not backups:
+        print("No Browser Janitor backups found.")
+        return
+    print("Available backups:")
+    for index, item in enumerate(backups, start=1):
+        print(f"{index:>2}. {item.browser:<16} {item.created}")
+        print(f"    backup:   {item.backup}")
+        print(f"    restores: {item.original}")

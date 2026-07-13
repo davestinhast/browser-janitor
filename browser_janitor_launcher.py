@@ -27,6 +27,9 @@ def run_interactive() -> int:
         print("7. Performance/FPS audit")
         print("8. Apply gaming profile")
         print("9. Apply low-RAM profile")
+        print("10. Benchmark RAM before/after")
+        print("11. Watch browser RAM")
+        print("12. Restore settings backup")
         print("0. Exit")
         choice = input("\nChoose an option: ").strip()
         print()
@@ -78,6 +81,25 @@ def run_interactive() -> int:
             code = main(["optimize", "--profile", "low-ram", "--apply"]) if confirm == "y" else 0
             if confirm != "y":
                 print("Cancelled.")
+            pause()
+            return code
+        if choice == "10":
+            code = main(["bench", "--delay", "5"])
+            pause()
+            return code
+        if choice == "11":
+            code = main(["watch", "--interval", "5"])
+            pause()
+            return code
+        if choice == "12":
+            code = main(["restore", "--list"])
+            index = input("\nBackup index to restore, or blank to cancel: ").strip()
+            if index:
+                confirm = input("Restore selected backup? [y/N]: ").strip().lower()
+                if confirm == "y":
+                    code = main(["restore", "--index", index, "--apply"])
+                else:
+                    print("Cancelled.")
             pause()
             return code
         if choice == "0":

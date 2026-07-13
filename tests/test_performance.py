@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from browser_janitor.performance import apply_profile
+from browser_janitor.performance import apply_profile, list_backups, restore_backup
 from browser_janitor.rules import BrowserRoot
 
 
@@ -54,6 +54,23 @@ class PerformanceProfileTests(unittest.TestCase):
             self.assertFalse(data["profile"]["info_cache"]["Default"]["background_apps"])
             self.assertFalse(data["edge"]["perf_center"]["efficiency_mode_v2_is_active"])
             self.assertTrue(changes[0].backup.exists())
+
+    def test_list_and_restore_backup(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            state = self.write_state(root)
+            original_text = state.read_text(encoding="utf-8")
+
+            apply_profile(
+                "gaming",
+                apply=True,
+                roots=[BrowserRoot("Microsoft Edge", "chromium", root)],
+            )
+            backups = list_backups([BrowserRoot("Microsoft Edge", "chromium", root)])
+
+            self.assertEqual(len(backups), 1)
+            restore_backup(backups[0])
+            self.assertEqual(state.read_text(encoding="utf-8"), original_text)
 
 
 if __name__ == "__main__":

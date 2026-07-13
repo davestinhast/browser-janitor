@@ -7,7 +7,7 @@ from pathlib import Path
 from . import __version__
 from .console import print_extension_summary, print_scan_summary
 from .extensions import scan_extensions
-from .performance import apply_profile, audit_performance
+from .performance import apply_profile, audit_performance, benchmark, list_backups, restore_backup, take_snapshot
 from .report import extensions_to_json, human_size, to_json, write_report
 from .scanner import remove_candidate, scan
 
@@ -44,6 +44,19 @@ def build_parser() -> argparse.ArgumentParser:
     opt_cmd = sub.add_parser("optimize", help="Apply a safe browser performance profile.")
     opt_cmd.add_argument("--profile", choices=["gaming", "low-ram", "balanced"], required=True)
     opt_cmd.add_argument("--apply", action="store_true", help="Write changes. Without this, only prints a plan.")
+
+    bench_cmd = sub.add_parser("bench", help="Measure browser RAM/process usage before and after a short delay.")
+    bench_cmd.add_argument("--delay", type=int, default=5, help="Seconds between snapshots.")
+    bench_cmd.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+
+    watch_cmd = sub.add_parser("watch", help="Watch browser RAM/process usage.")
+    watch_cmd.add_argument("--interval", type=int, default=5, help="Refresh interval in seconds.")
+    watch_cmd.add_argument("--ticks", type=int, default=0, help="Number of refreshes. 0 means until Ctrl+C.")
+
+    restore_cmd = sub.add_parser("restore", help="List or restore Browser Janitor setting backups.")
+    restore_cmd.add_argument("--list", action="store_true", help="List backups.")
+    restore_cmd.add_argument("--index", type=int, help="Restore backup by list index.")
+    restore_cmd.add_argument("--apply", action="store_true", help="Actually restore the selected backup.")
 
     return parser
 
@@ -154,6 +167,55 @@ def main(argv: list[str] | None = None) -> int:
         print_changes(changes, applied=args.apply)
         if not args.apply:
             print("\nDry run only. Add --apply to write changes with backups.")
+        return 0
+    if args.command == "bench":
+        before, after = benchmark(args.delay)
+        if args.json:
+            import json
+
+            print(json.dumps({"before": before, "after": after}, default=lambda obj: obj.__dict__, indent=2))
+        else:
+            from .console import print_benchmark
+
+            print_benchmark(before, after)
+        return 0
+    if args.command == "watch":
+        from .console import print_snapshot
+
+        count = 0
+        try:
+            while True:
+                print("\033c", end="")
+                print_snapshot("Browser Watch", take_snapshot())
+                print("\nCtrl+C to stop.")
+                count += 1
+                if args.ticks and count >= args.ticks:
+                    break
+                import time
+
+                time.sleep(max(args.interval, 1))
+        except KeyboardInterrupt:
+            print("\nStopped.")
+        return 0
+    if args.command == "restore":
+        backups = list_backups()
+        if args.index is None or args.list:
+            from .console import print_backup_list
+
+            print_backup_list(backups)
+            if args.index is None:
+                return 0
+        if args.index < 1 or args.index > len(backups):
+            print("Invalid backup index.", file=sys.stderr)
+            return 2
+        selected = backups[args.index - 1]
+        if not args.apply:
+            print(f"Dry run: would restore {selected.backup} -> {selected.original}")
+            print("Add --apply to restore.")
+            return 0
+        restore_point = restore_backup(selected)
+        print(f"Restored: {selected.original}")
+        print(f"Previous current file backup: {restore_point}")
         return 0
     parser.error("unknown command")
     return 2
