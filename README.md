@@ -1,8 +1,8 @@
 # Browser Janitor
 
-Browser Janitor is a safe browser cleanup tool for people who want a faster,
-lighter browser profile without losing accounts, history, passwords, sessions or
-bookmarks.
+Browser Janitor is a safe browser cleanup and performance tool for people who
+want lower RAM usage, less browser background work and cleaner profiles without
+losing accounts, history, passwords, sessions or bookmarks.
 
 It scans Chrome, Edge, Brave, Chromium and Firefox profiles, reports how much
 space is used by regenerable cache folders, and only cleans targets that are
@@ -12,6 +12,8 @@ explicitly marked as safe.
 
 - console-first interface that works well as a Windows `.exe`
 - safe cache scanner with dry-run cleanup
+- FPS/RAM performance audit
+- reversible performance profiles
 - HTML and Markdown reports
 - browser extension permission audit
 - conservative guards for sensitive profile files
@@ -91,6 +93,35 @@ Audit extensions:
 python -m browser_janitor extensions
 ```
 
+Audit real performance pressure:
+
+```powershell
+python -m browser_janitor perf
+```
+
+Preview a profile:
+
+```powershell
+python -m browser_janitor optimize --profile gaming
+python -m browser_janitor optimize --profile low-ram
+```
+
+Apply a profile with backups:
+
+```powershell
+python -m browser_janitor optimize --profile gaming --apply
+```
+
+Profiles:
+
+- `gaming`: reduces background browser work for FPS-sensitive use.
+- `low-ram`: favors memory reduction for inactive/background browser work.
+- `balanced`: safe baseline with background browser apps disabled.
+
+Browser Janitor does not promise fake FPS gains. It targets measurable sources
+of browser overhead: running browser processes, background apps, Edge performance
+mode, inactive-tab memory behavior and extensions with broad permissions.
+
 ## Windows executable
 
 Build a console executable with PyInstaller:
@@ -118,6 +149,7 @@ Browser Janitor is intentionally conservative:
 4. Sensitive profile databases are blocked by name even if they appear under a
    configured cleanup path.
 5. Locked files are skipped instead of forcing browser processes to close.
+6. Performance profiles back up browser JSON settings before writing changes.
 
 For best results, close your browsers before running `clean --apply`.
 
@@ -125,5 +157,22 @@ For best results, close your browsers before running `clean --apply`.
 
 - interactive terminal menu
 - per-site storage size report
+- extension disable/open-management workflow
+- benchmark mode for before/after RAM snapshots
 - Tauri desktop interface
 - native Rust rewrite for a single-file Windows executable
+
+## Research notes
+
+The performance features are based on vendor-documented behavior:
+
+- Chrome Memory Saver frees memory from inactive tabs and exposes Moderate,
+  Balanced and Maximum modes in Performance settings.
+- Microsoft Edge Sleeping Tabs pauses inactive tabs and can reduce memory/CPU
+  pressure; Microsoft has reported average memory and CPU reductions for this
+  feature.
+- Firefox performance settings expose hardware acceleration and content process
+  controls, but Mozilla recommends changing them only when the workload or
+  hardware behavior calls for it.
+- Extensions can add CPU/RAM overhead, especially when they request broad host,
+  tab, scripting, cookie or webRequest permissions.

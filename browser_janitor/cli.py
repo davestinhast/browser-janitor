@@ -7,6 +7,7 @@ from pathlib import Path
 from . import __version__
 from .console import print_extension_summary, print_scan_summary
 from .extensions import scan_extensions
+from .performance import apply_profile, audit_performance
 from .report import extensions_to_json, human_size, to_json, write_report
 from .scanner import remove_candidate, scan
 
@@ -36,6 +37,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     doctor_cmd = sub.add_parser("doctor", help="Show browser cleanup and extension health summary.")
     doctor_cmd.add_argument("--report", type=Path, help="Write an HTML report to this path.")
+
+    perf_cmd = sub.add_parser("perf", help="Audit browser RAM/FPS performance settings.")
+    perf_cmd.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+
+    opt_cmd = sub.add_parser("optimize", help="Apply a safe browser performance profile.")
+    opt_cmd.add_argument("--profile", choices=["gaming", "low-ram", "balanced"], required=True)
+    opt_cmd.add_argument("--apply", action="store_true", help="Write changes. Without this, only prints a plan.")
 
     return parser
 
@@ -118,6 +126,34 @@ def main(argv: list[str] | None = None) -> int:
             write_report(args.report, candidates, "html", extensions)
             print()
             print(f"HTML report written to: {args.report}")
+        return 0
+    if args.command == "perf":
+        usage, findings = audit_performance()
+        if args.json:
+            import json
+
+            print(
+                json.dumps(
+                    {
+                        "usage": [item.__dict__ for item in usage],
+                        "findings": [item.__dict__ for item in findings],
+                    },
+                    indent=2,
+                    default=str,
+                )
+            )
+        else:
+            from .console import print_perf_summary
+
+            print_perf_summary(usage, findings)
+        return 0
+    if args.command == "optimize":
+        changes = apply_profile(args.profile, apply=args.apply)
+        from .console import print_changes
+
+        print_changes(changes, applied=args.apply)
+        if not args.apply:
+            print("\nDry run only. Add --apply to write changes with backups.")
         return 0
     parser.error("unknown command")
     return 2

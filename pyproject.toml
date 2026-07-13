@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "browser-janitor"
-version = "0.1.0"
-description = "Safe browser cache scanner and cleaner that refuses to touch history, cookies, passwords or sessions."
+version = "0.2.0"
+description = "Safe browser cache and performance optimizer that refuses to touch history, cookies, passwords or sessions."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"

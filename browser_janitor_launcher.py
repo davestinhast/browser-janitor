@@ -24,6 +24,9 @@ def run_interactive() -> int:
         print("4. Clean dry-run")
         print("5. Clean safe targets now")
         print("6. Write HTML report")
+        print("7. Performance/FPS audit")
+        print("8. Apply gaming profile")
+        print("9. Apply low-RAM profile")
         print("0. Exit")
         choice = input("\nChoose an option: ").strip()
         print()
@@ -57,6 +60,24 @@ def run_interactive() -> int:
             report = Path.cwd() / "browser-janitor-report.html"
             code = main(["doctor", "--report", str(report)])
             print(f"\nReport saved to: {report}")
+            pause()
+            return code
+        if choice == "7":
+            code = main(["perf"])
+            pause()
+            return code
+        if choice == "8":
+            confirm = input("Apply gaming profile with JSON backups? [y/N]: ").strip().lower()
+            code = main(["optimize", "--profile", "gaming", "--apply"]) if confirm == "y" else 0
+            if confirm != "y":
+                print("Cancelled.")
+            pause()
+            return code
+        if choice == "9":
+            confirm = input("Apply low-RAM profile with JSON backups? [y/N]: ").strip().lower()
+            code = main(["optimize", "--profile", "low-ram", "--apply"]) if confirm == "y" else 0
+            if confirm != "y":
+                print("Cancelled.")
             pause()
             return code
         if choice == "0":
