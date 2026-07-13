@@ -19,6 +19,7 @@ class Candidate:
     files: int
     safe: bool
     reason: str
+    tier: str = "safe"
 
 
 def default_roots() -> list[BrowserRoot]:
@@ -89,6 +90,7 @@ def scan(roots: list[BrowserRoot] | None = None) -> list[Candidate]:
                         files=files,
                         safe=safe,
                         reason=rule.reason if safe else "Protected profile data guard blocked this path.",
+                        tier=rule.tier,
                     )
                 )
     return candidates

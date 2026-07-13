@@ -18,6 +18,7 @@ class CleanRule:
     label: str
     safe: bool = True
     reason: str = "Regenerable browser cache."
+    tier: str = "safe"
 
 
 PROTECTED_NAMES = {
@@ -62,6 +63,7 @@ CHROMIUM_RULES = (
         ("Service Worker", "CacheStorage"),
         "Service worker cache",
         reason="Offline/site cache. May make the first reload slower but should not sign users out.",
+        tier="standard",
     ),
 )
 

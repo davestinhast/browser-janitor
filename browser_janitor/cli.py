@@ -5,7 +5,9 @@ import sys
 from pathlib import Path
 
 from . import __version__
-from .report import human_size, to_json, to_markdown, write_report
+from .console import print_extension_summary, print_scan_summary
+from .extensions import scan_extensions
+from .report import extensions_to_json, human_size, to_json, write_report
 from .scanner import remove_candidate, scan
 
 
@@ -20,12 +22,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     scan_cmd = sub.add_parser("scan", help="Show safe cleanup candidates.")
     scan_cmd.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
-    scan_cmd.add_argument("--report", type=Path, help="Write a Markdown report to this path.")
+    scan_cmd.add_argument("--report", type=Path, help="Write a report to this path.")
+    scan_cmd.add_argument("--html", action="store_true", help="Use HTML when writing --report.")
 
     clean_cmd = sub.add_parser("clean", help="Clean safe cache targets.")
     clean_cmd.add_argument("--apply", action="store_true", help="Actually delete safe cache targets.")
     clean_cmd.add_argument("--json", action="store_true", help="Print machine-readable JSON summary.")
-    clean_cmd.add_argument("--report", type=Path, help="Write a Markdown report before cleaning.")
+    clean_cmd.add_argument("--report", type=Path, help="Write a report before cleaning.")
+    clean_cmd.add_argument("--html", action="store_true", help="Use HTML when writing --report.")
+
+    ext_cmd = sub.add_parser("extensions", help="Audit installed browser extensions.")
+    ext_cmd.add_argument("--json", action="store_true", help="Print machine-readable JSON.")
+
+    doctor_cmd = sub.add_parser("doctor", help="Show browser cleanup and extension health summary.")
+    doctor_cmd.add_argument("--report", type=Path, help="Write an HTML report to this path.")
 
     return parser
 
@@ -33,11 +43,12 @@ def build_parser() -> argparse.ArgumentParser:
 def cmd_scan(args: argparse.Namespace) -> int:
     candidates = scan()
     if args.report:
-        write_report(args.report, candidates, "md")
+        extensions = scan_extensions() if args.html else None
+        write_report(args.report, candidates, "html" if args.html else "md", extensions)
     if args.json:
         print(to_json(candidates))
         return 0
-    print(to_markdown(candidates))
+    print_scan_summary(candidates)
     return 0
 
 
@@ -47,7 +58,8 @@ def cmd_clean(args: argparse.Namespace) -> int:
     total = sum(item.size_bytes for item in safe)
 
     if args.report:
-        write_report(args.report, candidates, "md")
+        extensions = scan_extensions() if args.html else None
+        write_report(args.report, candidates, "html" if args.html else "md", extensions)
 
     if not args.apply:
         message = (
@@ -89,6 +101,24 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_scan(args)
     if args.command == "clean":
         return cmd_clean(args)
+    if args.command == "extensions":
+        extensions = scan_extensions()
+        if args.json:
+            print(extensions_to_json(extensions))
+        else:
+            print_extension_summary(extensions)
+        return 0
+    if args.command == "doctor":
+        candidates = scan()
+        extensions = scan_extensions()
+        print_scan_summary(candidates)
+        print()
+        print_extension_summary(extensions)
+        if args.report:
+            write_report(args.report, candidates, "html", extensions)
+            print()
+            print(f"HTML report written to: {args.report}")
+        return 0
     parser.error("unknown command")
     return 2
 

@@ -8,6 +8,15 @@ It scans Chrome, Edge, Brave, Chromium and Firefox profiles, reports how much
 space is used by regenerable cache folders, and only cleans targets that are
 explicitly marked as safe.
 
+## Features
+
+- console-first interface that works well as a Windows `.exe`
+- safe cache scanner with dry-run cleanup
+- HTML and Markdown reports
+- browser extension permission audit
+- conservative guards for sensitive profile files
+- no runtime dependencies
+
 ## What it cleans
 
 - HTTP cache
@@ -70,6 +79,35 @@ JSON output:
 python -m browser_janitor scan --json
 ```
 
+Run a full health check:
+
+```powershell
+python -m browser_janitor doctor --report browser-report.html
+```
+
+Audit extensions:
+
+```powershell
+python -m browser_janitor extensions
+```
+
+## Windows executable
+
+Build a console executable with PyInstaller:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build-exe.ps1
+```
+
+The output is:
+
+```text
+dist\BrowserJanitor.exe
+```
+
+It is built with the console subsystem, so double-clicking it opens like a CMD
+program instead of a graphical app.
+
 ## Safety model
 
 Browser Janitor is intentionally conservative:
@@ -85,8 +123,7 @@ For best results, close your browsers before running `clean --apply`.
 
 ## Roadmap
 
-- HTML reports
-- extension permission audit
+- interactive terminal menu
 - per-site storage size report
 - Tauri desktop interface
 - native Rust rewrite for a single-file Windows executable
